@@ -7,6 +7,9 @@ import { GitHubAPI } from './github'
 import { logger } from './logger'
 import { LoggerWithTarget, wrapLogger } from './wrap-logger'
 
+import { HttpsProxyAgent } from 'https-proxy-agent'
+import {URL} from 'url'
+
 // Some events can't get an authenticated client (#382):
 function isUnauthenticatedEvent (event: WebhookEvent) {
   return !event.payload.installation ||
@@ -185,10 +188,18 @@ export class Application {
       throw new Error('Your \`GHE_HOST\` environment variable should not begin with https:// or http://')
     }
 
+    const outProxy = process.env.https_proxy || process.env.http_proxy
+    const proxyUrl = outProxy ? new URL(outProxy) : null
     const github = GitHubAPI({
       baseUrl: process.env.GHE_HOST && `https://${process.env.GHE_HOST}/api/v3`,
       debug: process.env.LOG_LEVEL === 'trace',
-      logger: log.child({ name: 'github', installation: String(id) })
+      logger: log.child({ name: 'github', installation: String(id) }),
+      proxyReqOptDecorator: (proxyReqOpts: any) => {
+        if (proxyUrl) {
+          proxyReqOpts.agent = new HttpsProxyAgent({host: proxyUrl.hostname, port: proxyUrl.port})
+        }
+        return proxyReqOpts
+      }
     })
 
     // Cache for 1 minute less than GitHub expiry

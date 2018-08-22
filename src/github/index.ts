@@ -25,7 +25,8 @@ export function GitHubAPI (options: Options = {} as any) {
 export interface Options extends Octokit.Options {
   debug?: boolean
   logger: Logger
-  limiter?: any
+  limiter?: any,
+  proxyReqOptDecorator?: any
 }
 
 export interface RequestOptions {
